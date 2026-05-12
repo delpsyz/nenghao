@@ -158,6 +158,7 @@ body{font-family:'Microsoft YaHei','PingFang SC',sans-serif;background:#f0f2f5;m
         <button class="chart-btn active" data-d="total" onclick="setCD('total',this)">综合能耗</button>
         <button class="chart-btn" data-d="struct" onclick="setCD('struct',this)">能源结构</button>
         <button class="chart-btn" data-d="intensity" onclick="setCD('intensity',this)">产值能耗</button>
+        <button class="chart-btn" data-d="product" onclick="setCD('product',this)">单位产品能耗</button>
         <button class="chart-btn" data-d="bench" onclick="setCD('bench',this)">行业对标</button>
     </div>
     <div class="chart-box"><canvas id="chart"></canvas></div>
@@ -437,7 +438,15 @@ function drawChart(){
         if(selCat&&selSub){const bm=DB[selCat].s[selSub];ds.push({label:'行业平均',data:Array(id.length).fill(bm.e),borderColor:'#d97706',borderWidth:2,borderDash:[5,3],fill:false,type:'line',pointRadius:0});}
         cfg.type=cType;cfg.data={labels:id.map(d=>d.y+'年'),datasets:ds};
         cfg.options.plugins.title.text='产值能耗趋势（tce/万元）';
-        cfg.options.scales={y:{beginAtZero:true},x:{ticks:{color:'#666'}}};
+        cfg.options.scales={y:{beginAtZero:true},x:{ticks:{color:'#666'}}};}
+    else if(cDim==='product'){
+        const pd=data.filter(d=>d.output>0);
+        if(!pd.length){alert('请录入产量');return;}
+        if(cType==='pie'){alert('单位产品能耗不支持饼图展示，请切换为柱状图或折线图');return;}
+        const ds=[{label:'单位产品能耗',data:pd.map(d=>+(d.tce/d.output).toFixed(4)),backgroundColor:'#7c3aed',borderColor:'#7c3aed',borderWidth:2,borderRadius:6}];
+        cfg.type=cType;cfg.data={labels:pd.map(d=>d.y+'年'),datasets:ds};
+        cfg.options.plugins.title.text='单位产品能耗趋势（tce/产量单位）';
+        cfg.options.scales={y:{beginAtZero:true,title:{display:true,text:'tce/产量单位',color:'#888'}},x:{ticks:{color:'#666'}}};
     }else{
         const labels=data.map(d=>d.y+'年'),values=data.map(d=>+d.tce.toFixed(2));
         if(cType==='pie'){
