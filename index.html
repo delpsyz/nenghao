@@ -432,6 +432,7 @@ function drawChart(){
     }else if(cDim==='intensity'){
         const id=data.filter(d=>d.iv>0);
         if(!id.length){alert('请录入产值');return;}
+        if(cType==='pie'){alert('产值能耗不支持饼图展示，请切换为柱状图或折线图');return;}
         const ds=[{label:'产值能耗',data:id.map(d=>+d.iv.toFixed(4)),backgroundColor:'#059669',borderColor:'#059669',borderWidth:2,borderRadius:6}];
         if(selCat&&selSub){const bm=DB[selCat].s[selSub];ds.push({label:'行业平均',data:Array(id.length).fill(bm.e),borderColor:'#d97706',borderWidth:2,borderDash:[5,3],fill:false,type:'line',pointRadius:0});}
         cfg.type=cType;cfg.data={labels:id.map(d=>d.y+'年'),datasets:ds};
