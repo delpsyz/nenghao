@@ -110,8 +110,8 @@ body{font-family:'Microsoft YaHei','PingFang SC',sans-serif;background:#f0f2f5;m
 <div class="app">
 
 <div class="app-header">
-    <h1>🌱 清洁生产能资源消耗分析 <span>上海集众</span></h1>
-    <div style="font-size:11px;color:#999">参考数据：上海市产业能效指南（2023版）</div>
+    <h1>🌱 清洁生产能资源消耗分析 <span>V11</span></h1>
+    <div style="font-size:11px;color:#999">数据来源：上海市产业能效指南（2023版）</div>
 </div>
 
 <!-- 行业选择 -->
@@ -408,7 +408,7 @@ function getData(){
     });
 }
 
-const dlCfg={display:true,color:'#1a1a2e',font:{size:10,weight:'bold'},anchor:'end',align:'top',offset:3,formatter:v=>typeof v==='number'?(v>=100?v.toFixed(0):v>=1?v.toFixed(1):v.toFixed(2)):v};
+const dlCfg={display:true,color:'#1a1a2e',font:{size:10,weight:'bold'},anchor:'end',align:'top',offset:3,formatter:v=>typeof v==='number'?v.toFixed(2):v};
 const pieCfg={display:true,color:'#fff',font:{size:10,weight:'bold'},formatter:(v,c)=>{const t=c.dataset.data.reduce((a,b)=>a+b,0);return c.chart.data.labels[c.dataIndex]+'\n'+((v/t)*100).toFixed(1)+'%'}};
 
 function drawChart(){
@@ -430,6 +430,7 @@ function drawChart(){
         cfg.type='bar';cfg.data={labels:data.map(d=>d.y+'年'),datasets:types.map((t,i)=>({label:t,data:data.map(d=>{const f=d.struct.find(e=>e.t===t);return f?+f.v.toFixed(2):0}),backgroundColor:COLORS[i%8],borderRadius:3}))};
         cfg.options.plugins.title.text='能源消费结构（tce）';
         cfg.options.scales={x:{stacked:true,ticks:{color:'#666'}},y:{stacked:true,beginAtZero:true,ticks:{color:'#666'}}};
+        cfg.options.plugins.datalabels={display:c=>c.dataset.data[c.dataIndex]>0,color:'#1a1a2e',font:{size:9,weight:'bold'},anchor:'center',align:'center',formatter:v=>typeof v==='number'?v.toFixed(2):v};
     }else if(cDim==='intensity'){
         const id=data.filter(d=>d.iv>0);
         if(!id.length){alert('请录入产值');return;}
