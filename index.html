@@ -70,7 +70,10 @@ body{font-family:'Microsoft YaHei','PingFang SC',sans-serif;background:#f0f2f5;m
 .chart-btn{padding:5px 12px;border:1px solid #d9d9d9;border-radius:14px;background:#fff;cursor:pointer;font-size:11px;color:#666;transition:all .2s}
 .chart-btn.active{background:#2563eb;color:#fff;border-color:#2563eb}
 .chart-btn:hover:not(.active){border-color:#2563eb;color:#2563eb}
-.chart-box{position:relative;height:320px}
+.chart-box{position:relative;height:320px;min-height:200px;min-width:300px;overflow:hidden}
+.resize-handle{position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;z-index:10}
+.resize-handle::after{content:'';position:absolute;right:2px;bottom:2px;width:0;height:0;border-style:solid;border-width:0 0 12px 12px;border-color:transparent transparent #bbb transparent}
+.resize-handle:hover::after{border-color:transparent transparent #2563eb transparent}
 
 /* 报告 */
 .report-full{background:#fff;border-radius:8px;padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
@@ -110,8 +113,8 @@ body{font-family:'Microsoft YaHei','PingFang SC',sans-serif;background:#f0f2f5;m
 <div class="app">
 
 <div class="app-header">
-    <h1>🌱 清洁生产能资源消耗分析 <span>V11</span></h1>
-    <div style="font-size:11px;color:#999">数据来源：上海市产业能效指南（2023版）</div>
+    <h1>🌱 清洁生产能资源消耗分析 <span>上海集众</span></h1>
+    <div style="font-size:11px;color:#999">参考数据：上海市产业能效指南（2023版）</div>
 </div>
 
 <!-- 行业选择 -->
@@ -161,8 +164,7 @@ body{font-family:'Microsoft YaHei','PingFang SC',sans-serif;background:#f0f2f5;m
         <button class="chart-btn" data-d="product" onclick="setCD('product',this)">单位产品能耗</button>
         <button class="chart-btn" data-d="bench" onclick="setCD('bench',this)">行业对标</button>
     </div>
-    <div class="chart-box"><canvas id="chart"></canvas></div>
-    <div id="summary" style="margin-top:10px"></div>
+    <div class="chart-box"><canvas id="chart"></canvas><div class="resize-handle" id="resizeHandle"></div></div>
 </div>
 
 <!-- 报告 -->
@@ -301,6 +303,26 @@ function render(){
     years.forEach(y=>{
         const total=energies.reduce((s,en)=>s+parseFloat(calcTce(en.type,en.vals[y.y]||'',en.units[y.y]||ET[en.type]?.d||'')),0);
         h+=`<td class="tce-cell" style="font-size:13px;padding:8px">${total.toFixed(2)} 吨标煤</td>`;
+    });
+    h+='<td></td></tr>';
+    
+    // 单位产品能耗行
+    h+=`<tr><td class="row-label output-row">📐 单位产品能耗</td>`;
+    years.forEach(y=>{
+        const total=energies.reduce((s,en)=>s+parseFloat(calcTce(en.type,en.vals[y.y]||'',en.units[y.y]||ET[en.type]?.d||'')),0);
+        const output=parseFloat(y.output)||0;
+        const pe=output>0?(total/output).toFixed(4):'-';
+        h+=`<td class="tce-cell" style="font-size:12px;padding:6px">${pe!=='-'?pe+' tce/'+y.ou:'-'}</td>`;
+    });
+    h+='<td></td></tr>';
+    
+    // 产值能耗行
+    h+=`<tr><td class="row-label output-row">📊 产值能耗</td>`;
+    years.forEach(y=>{
+        const total=energies.reduce((s,en)=>s+parseFloat(calcTce(en.type,en.vals[y.y]||'',en.units[y.y]||ET[en.type]?.d||'')),0);
+        const val=parseFloat(y.value)||0;
+        const iv=val>0?(total/val).toFixed(4):'-';
+        h+=`<td class="tce-cell" style="font-size:12px;padding:6px">${iv!=='-'?iv+' tce/万元':'-'}</td>`;
     });
     h+='<td></td></tr>';
     
@@ -468,15 +490,8 @@ function generate(){
     if(!data.length){alert('请先录入能源消耗数据');return;}
     document.getElementById('chartCard').style.display='block';
     document.getElementById('reportArea').style.display='block';
-    drawChart();renderSummary(data);renderReport(data);renderProblems(data);renderSuggestions();
+    drawChart();renderReport(data);renderProblems(data);renderSuggestions();
     document.getElementById('chartCard').scrollIntoView({behavior:'smooth'});
-}
-
-function renderSummary(data){
-    const total=data.reduce((s,d)=>s+d.tce,0),avg=total/data.length;
-    const g=data.length>1&&data[0].tce>0?((data[data.length-1].tce-data[0].tce)/data[0].tce*100).toFixed(1):0;
-    const id=data.filter(d=>d.iv>0),ai=id.length?id.reduce((s,d)=>s+d.iv,0)/id.length:0;
-    document.getElementById('summary').innerHTML=`<span class="metric-tag purple">累计 ${total.toFixed(2)} tce</span><span class="metric-tag blue">年均 ${avg.toFixed(2)} tce</span><span class="metric-tag ${g>0?'red':'green'}">变化 ${g>0?'+':''}${g}%</span><span class="metric-tag orange">产值能耗 ${ai?ai.toFixed(3)+' tce/万元':'未录入'}</span>`;
 }
 
 function renderReport(data){
@@ -564,6 +579,31 @@ function loadDemo(){
 }
 
 init();
+
+/* ========== 图表拖拽调整大小 ========== */
+(function(){
+    let dragging=false,startX,startY,startW,startH;
+    const handle=document.getElementById('resizeHandle');
+    const box=handle?.parentElement;
+    if(!box)return;
+    handle.addEventListener('mousedown',e=>{
+        e.preventDefault();e.stopPropagation();
+        dragging=true;
+        startX=e.clientX;startY=e.clientY;
+        startW=box.offsetWidth;startH=box.offsetHeight;
+        box.style.height=startH+'px';
+        box.style.width=startW+'px';
+    });
+    document.addEventListener('mousemove',e=>{
+        if(!dragging)return;
+        const nw=Math.max(300,startW+(e.clientX-startX));
+        const nh=Math.max(200,startH+(e.clientY-startY));
+        box.style.width=nw+'px';
+        box.style.height=nh+'px';
+        if(chart)chart.resize();
+    });
+    document.addEventListener('mouseup',()=>{dragging=false;});
+})();
 </script>
 </body>
 </html>
