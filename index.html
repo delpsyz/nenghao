@@ -163,6 +163,8 @@ body{font-family:'Microsoft YaHei','PingFang SC',sans-serif;background:#f0f2f5;m
         <button class="chart-btn" data-d="intensity" onclick="setCD('intensity',this)">产值能耗</button>
         <button class="chart-btn" data-d="product" onclick="setCD('product',this)">单位产品能耗</button>
         <button class="chart-btn" data-d="bench" onclick="setCD('bench',this)">行业对标</button>
+        <div class="sep"></div>
+        <button class="chart-btn" onclick="saveChartImage()" title="保存为PNG图片（使用当前图表尺寸）">💾 保存图片</button>
     </div>
     <div class="chart-box"><canvas id="chart"></canvas><div class="resize-handle" id="resizeHandle"></div></div>
 </div>
@@ -282,8 +284,8 @@ function render(){
     h+=`<tr><td class="row-label output-row">📦 产量</td>`;
     years.forEach((y,yi)=>{
         h+=`<td><div style="display:flex;gap:4px;justify-content:center;align-items:center">
-            <input type="number" class="unit-input" value="${y.output}" placeholder="产量" onchange="years[${yi}].output=this.value">
-            <input type="text" class="unit-input" value="${y.ou}" style="width:40px" onchange="years[${yi}].ou=this.value">
+            <input type="number" class="unit-input" value="${y.output}" placeholder="产量" onchange="years[${yi}].output=this.value;render()">
+            <input type="text" class="unit-input" value="${y.ou}" style="width:40px" onchange="years[${yi}].ou=this.value;render()">
         </div></td>`;
     });
     h+='<td></td></tr>';
@@ -292,8 +294,8 @@ function render(){
     h+=`<tr><td class="row-label output-row">💰 产值</td>`;
     years.forEach((y,yi)=>{
         h+=`<td><div style="display:flex;gap:4px;justify-content:center;align-items:center">
-            <input type="number" class="unit-input" value="${y.value}" placeholder="产值" onchange="years[${yi}].value=this.value">
-            <input type="text" class="unit-input" value="${y.vu}" style="width:40px" onchange="years[${yi}].vu=this.value">
+            <input type="number" class="unit-input" value="${y.value}" placeholder="产值" onchange="years[${yi}].value=this.value;render()">
+            <input type="text" class="unit-input" value="${y.vu}" style="width:40px" onchange="years[${yi}].vu=this.value;render()">
         </div></td>`;
     });
     h+='<td></td></tr>';
@@ -482,6 +484,32 @@ function drawChart(){
         }
     }
     chart=new Chart(ctx,cfg);
+}
+
+/* ========== 保存图表为图片 ========== */
+function saveChartImage(){
+    const canvas=document.getElementById('chart');
+    if(!chart){alert('暂无图表数据，请先生成报告');return;}
+    // 获取当前标题文本作为文件名前缀
+    const title=chart.options.plugins.title.text||'图表';
+    const now=new Date();
+    const ts=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+    // 使用 toBlob 保持高质量导出（使用当前 canvas 的实际尺寸）
+    const currentW=canvas.parentElement.offsetWidth;
+    const currentH=canvas.parentElement.offsetHeight;
+    // 创建一个临时 canvas，按当前显示尺寸导出
+    const tmp=document.createElement('canvas');
+    tmp.width=currentW;
+    tmp.height=currentH;
+    const tctx=tmp.getContext('2d');
+    // 白色背景
+    tctx.fillStyle='#ffffff';
+    tctx.fillRect(0,0,tmp.width,tmp.height);
+    tctx.drawImage(canvas,0,0,tmp.width,tmp.height);
+    const link=document.createElement('a');
+    link.download=`${title}_${ts}.png`;
+    link.href=tmp.toDataURL('image/png',1.0);
+    link.click();
 }
 
 /* ========== 生成报告 ========== */
